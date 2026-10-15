@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com">
+</head>
+<body>
+<meta charset="utf-8">
+<title>California 加州报税助手</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* 布局：左侧分步问卷（像填 1040/540 表格），右侧常驻结果卡；下方为逐行报表与加州细节 */
+:root {
+  --bg: #f3f5f7;
+  --paper: #ffffff;
+  --ink: #15233a;
+  --muted: #5b6878;
+  --line: #d5dce4;
+  --pacific: #1d4e89;      /* 主色：太平洋蓝 */
+  --pacific-soft: #e3ecf7;
+  --poppy: #e8820c;        /* 强调：加州罂粟橙 */
+  --poppy-soft: #fdf0e1;
+  --good: #1f7a4d;
+  --good-soft: #e2f3ea;
+  --bad: #b3261e;
+  --bad-soft: #fbe6e4;
+  --font-display: "IBM Plex Sans Condensed", "Noto Sans SC", system-ui, sans-serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141c; --paper: #161f2b; --ink: #e6ecf3; --muted: #9aa8b8; --line: #2a3747;
+    --pacific: #7fb0ec; --pacific-soft: #1b2d44; --poppy: #f5a24a; --poppy-soft: #3a2a17;
+    --good: #5fcf96; --good-soft: #15322a; --bad: #f2867e; --bad-soft: #3b1d1b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141c; --paper: #161f2b; --ink: #e6ecf3; --muted: #9aa8b8; --line: #2a3747;
+  --pacific: #7fb0ec; --pacific-soft: #1b2d44; --poppy: #f5a24a; --poppy-soft: #3a2a17;
+  --good: #5fcf96; --good-soft: #15322a; --bad: #f2867e; --bad-soft: #3b1d1b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.25; }
+h1 { font-size: 28px; }
+h2 { font-size: 20px; }
+h3 { font-size: 16px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; }
+header.top .tag { font-family: var(--font-num); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--poppy); }
+header.top p { margin: 4px 0 0; max-width: 62ch; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit; font-size: 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+  padding: 7px 14px; cursor: pointer;
+}
+button:hover { border-color: var(--pacific); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--poppy); outline-offset: 2px; }
+button.primary { background: var(--pacific); border-color: var(--pacific); color: var(--paper); }
+
+.notice { margin: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--muted); }
+.notice a { color: var(--pacific); white-space: nowrap; }
+.banner { background: var(--poppy-soft); border: 1px solid var(--poppy); border-radius: var(--radius); padding: 10px 14px; font-size: 14px; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.form-panel { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.steps { display: flex; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.steps button {
+  border: 0; border-radius: 0; background: transparent; padding: 14px 18px; white-space: nowrap; color: var(--muted);
+  border-bottom: 3px solid transparent; flex: 0 0 auto;
+}
+.steps button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--poppy); font-weight: 500; }
+.steps button .k { font-family: var(--font-num); font-size: 12px; margin-right: 6px; }
+.step { padding: 20px; display: grid; gap: 22px; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; min-width: 0; }
+legend { font-family: var(--font-display); font-weight: 700; font-size: 16px; padding: 0; margin-bottom: 4px; }
+.legend-note { font-size: 13px; color: var(--muted); margin: -6px 0 2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 16px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 14px; }
+.field .hint { font-size: 12px; color: var(--muted); }
+.field .src { font-family: var(--font-num); font-size: 11px; color: var(--pacific); background: var(--pacific-soft); padding: 1px 6px; border-radius: 4px; margin-left: 6px; white-space: nowrap; }
+.field .ca { color: var(--poppy); background: var(--poppy-soft); }
+input[type="text"], select {
+  font: inherit; font-family: var(--font-num); font-size: 15px; width: 100%; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);
+}
+select { font-family: var(--font-body); }
+.money { position: relative; }
+.money::before { content: "$"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--font-num); }
+.money input { padding-left: 22px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.check input { margin-top: 5px; }
+.step-nav { display: flex; justify-content: space-between; gap: 8px; padding: 0 20px 20px; }
+
+/* 右侧结果卡 */
+.summary { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 12px; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 8px; }
+.card .lbl { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.card .big { font-family: var(--font-num); font-size: 28px; font-weight: 600; line-height: 1.1; }
+.pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+.pill.refund { background: var(--good-soft); color: var(--good); }
+.pill.owe { background: var(--bad-soft); color: var(--bad); }
+.refund-c { color: var(--good); }
+.owe-c { color: var(--bad); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 13px; }
+.kv span:nth-child(even) { font-family: var(--font-num); text-align: right; }
+.card.ca-card { border-color: var(--poppy); }
+
+/* 下方报表 */
+.report { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.report .steps button[aria-selected="true"] { border-bottom-color: var(--pacific); }
+.tabpane { padding: 20px; display: grid; gap: 20px; min-width: 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; }
+td.amt, th.amt { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.line { font-family: var(--font-num); font-size: 12px; color: var(--muted); white-space: nowrap; width: 1%; }
+tr.total td { font-weight: 700; border-bottom: 2px solid var(--ink); }
+tr.sub td { color: var(--muted); font-size: 13px; }
+tr.sub td:nth-child(2) { padding-left: 26px; }
+.diff-add { color: var(--bad); }
+.diff-sub { color: var(--good); }
+.bar { height: 8px; background: var(--poppy); border-radius: 4px; min-width: 1px; }
+.bar.fed { background: var(--pacific); }
+.notes { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.notes li { background: var(--bg); border-left: 3px solid var(--poppy); padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 14px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.cols > div { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.ostc-list { display: grid; gap: 12px; }
+.ostc-row { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; background: var(--bg); }
+.ostc-row input[type="text"], .ostc-row select { background: var(--paper); }
+.ostc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ostc-status { font-size: 13px; }
+.ostc-status.ok { color: var(--good); }
+.ostc-status.no { color: var(--bad); }
+button.link { border: 0; background: none; color: var(--muted); padding: 2px 4px; font-size: 13px; }
+button.link:hover { color: var(--bad); }
+footer { font-size: 12px; color: var(--muted); max-width: 90ch; }
+footer a { color: var(--pacific); }
+@media (prefers-reduced-motion: no-preference) { .big { transition: color .2s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="tag">2025 税年 · Federal 1040 + California Form 540</div>
+      <h1>California 加州报税助手</h1>
+      <p class="muted">按 TurboTax 的问答思路一步步填写，右侧实时显示联邦和加州（California）的退税或补税。加州部分逐行对照 540 表、Schedule CA 和 FTB 3514（CalEITC 官方查表）。</p>
+    </div>
+    <div class="toolbar">
+      <button type="button" id="btn-sample">载入示例</button>
+      <button type="button" id="btn-clear">清空，填我自己的</button>
+      <button type="button" id="btn-copy">复制结果摘要</button>
+    </div>
+  </header>
+
+  <p class="notice small">本工具只用于估算和核对，不是税务建议，也不能代替正式报税软件或 CPA。你填写的数字只在你自己的浏览器里计算和保存，不会上传到任何服务器。<a href="https://github.com/billionwu443-byte/ca-tax-helper/releases/latest" target="_blank" rel="noopener">下载 Windows 桌面版</a></p>
+
+  <div class="banner" id="sample-banner">现在显示的是<strong>示例数据</strong>（单身、加州全年居民、年薪 $128,000 的工程师），不是你的数字。点“清空，填我自己的”开始填写。数据只保存在你自己的浏览器里。</div>
+
+  <div class="main">
+    <form class="form-panel" id="form" autocomplete="off">
+      <div class="steps" role="tablist" id="step-tabs">
+        <button type="button" role="tab" data-step="0" aria-selected="true"><span class="k">1</span>你的情况</button>
+        <button type="button" role="tab" data-step="1" aria-selected="false"><span class="k">2</span>收入</button>
+        <button type="button" role="tab" data-step="2" aria-selected="false"><span class="k">3</span>调整与扣除</button>
+        <button type="button" role="tab" data-step="3" aria-selected="false"><span class="k">4</span>已缴税款</button>
+      </div>
+
+      <!-- 第 1 步 -->
+      <section class="step" data-pane="0">
+        <fieldset>
+          <legend>申报身份</legend>
+          <div class="grid">
+            <div class="field">
+              <label for="status">Filing status</label>
+              <select id="status">
+                <option value="single">单身 Single</option>
+                <option value="mfj">已婚合并申报 MFJ</option>
+                <option value="mfs">已婚分开申报 MFS</option>
+                <option value="hoh">户主 Head of Household</option>
+                <option value="qss">丧偶且有受抚养子女 QSS</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="caResident">加州居民身份</label>
+              <select id="caResidency">
+                <option value="full">2025 全年加州居民（Form 540）</option>
+                <option value="part">部分年份居民：年中搬入或搬离加州（540NR）</option>
+                <option value="non">非居民：住在外州，有加州来源收入（540NR）</option>
+              </select>
+            </div>
+            <div class="field nr-part-only">
+              <label for="caMonths">2025 年在加州居住的月数</label>
+              <input type="text" inputmode="numeric" id="caMonths">
+              <span class="hint">1–11。满 6 个月才有租房抵免，超过 6 个月才能领 CalEITC</span>
+            </div>
+          </div>
+          <div class="grid">
+            <label class="check"><input type="checkbox" id="self65">本人 1961 年 1 月 2 日前出生（65 岁以上）</label>
+            <label class="check"><input type="checkbox" id="selfBlind">本人失明</label>
+            <label class="check spouse-only"><input type="checkbox" id="spouse65">配偶 65 岁以上</label>
+            <label class="check spouse-only"><input type="checkbox" id="spouseBlind">配偶失明</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>受抚养人</legend>
+          <div class="grid">
+            <div class="field"><label for="kidsU17">17 岁以下子女</label><input type="text" inputmode="numeric" id="kidsU17"><span class="hint">联邦子女税收抵免每人 $2,200，加州每人抵免 $475</span></div>
+            <div class="field"><label for="kidsU6">其中 6 岁以下</label><input type="text" inputmode="numeric" id="kidsU6"><span class="hint">用于加州 Young Child Tax Credit</span></div>
+            <div class="field"><label for="otherDeps">其他受抚养人</label><input type="text" inputmode="numeric" id="otherDeps"><span class="hint">17 岁以上子女、赡养的父母等</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>加州租房</legend>
+          <label class="check"><input type="checkbox" id="caRenter">2025 年在加州租房住满半年以上，房东的这套房没有享受房产税豁免，你也不是别人的受抚养人</label>
+          <p class="legend-note">符合条件的话可以申请加州 Nonrefundable Renter's Credit（$60 或 $120）。</p>
+        </fieldset>
+      </section>
+
+      <!-- 第 2 步 -->
+      <section class="step" data-pane="1" hidden>
+        <fieldset>
+          <legend>工资（W-2）</legend>
+          <p class="legend-note">有多张 W-2 就把同一栏的数字加起来。</p>
+          <div class="grid">
+            <div class="field"><label for="wages">联邦工资<span class="src">W-2 box 1</span></label><div class="money"><input type="text" inputmode="decimal" id="wages"></div></div>
+            <div class="field"><label for="caWages">加州工资<span class="src ca">W-2 box 16</span></label><div class="money"><input type="text" inputmode="decimal" id="caWages"></div><span class="hint">留空则按 box 1 + box 12W 计算</span></div>
+            <div class="field"><label for="box12W">HSA 供款<span class="src ca">box 12 代码 W</span></label><div class="money"><input type="text" inputmode="decimal" id="box12W"></div><span class="hint">联邦免税，加州要补税</span></div>
+            <div class="field"><label for="tips">其中合格小费</label><div class="money"><input type="text" inputmode="decimal" id="tips"></div><span class="hint">2025 新规：联邦最多扣 $25,000，加州不跟进</span></div>
+            <div class="field"><label for="overtime">其中加班费的溢价部分</label><div class="money"><input type="text" inputmode="decimal" id="overtime"></div><span class="hint">只填“半倍”那部分，联邦最多扣 $12,500</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>利息与股息</legend>
+          <div class="grid">
+            <div class="field"><label for="taxableInt">应税利息<span class="src">1099-INT box 1+3</span></label><div class="money"><input type="text" inputmode="decimal" id="taxableInt"></div></div>
+            <div class="field"><label for="treasuryInt">其中美国国债利息<span class="src ca">1099-INT box 3</span></label><div class="money"><input type="text" inputmode="decimal" id="treasuryInt"></div><span class="hint">联邦要交税，加州免税</span></div>
+            <div class="field"><label for="caMuniInt">加州市政债利息</label><div class="money"><input type="text" inputmode="decimal" id="caMuniInt"></div><span class="hint">联邦和加州都免税</span></div>
+            <div class="field"><label for="otherMuniInt">外州市政债利息</label><div class="money"><input type="text" inputmode="decimal" id="otherMuniInt"></div><span class="hint">联邦免税，加州要交税</span></div>
+            <div class="field"><label for="ordDiv">普通股息<span class="src">1099-DIV box 1a</span></label><div class="money"><input type="text" inputmode="decimal" id="ordDiv"></div></div>
+            <div class="field"><label for="qualDiv">其中合格股息<span class="src">box 1b</span></label><div class="money"><input type="text" inputmode="decimal" id="qualDiv"></div><span class="hint">联邦按 0/15/20% 优惠税率，加州按普通收入</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>资本利得（股票、基金、RSU 卖出）</legend>
+          <div class="grid">
+            <div class="field"><label for="stGain">短期净利得（亏损填负数）<span class="src">1099-B</span></label><div class="money"><input type="text" inputmode="decimal" id="stGain"></div><span class="hint">持有一年及以内</span></div>
+            <div class="field"><label for="ltGain">长期净利得（含基金分配）<span class="src">1099-B / DIV 2a</span></label><div class="money"><input type="text" inputmode="decimal" id="ltGain"></div><span class="hint">RSU 的成本基础要用归属日市价，券商常报成 0</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>其他收入</legend>
+          <div class="grid">
+            <div class="field"><label for="seProfit">自雇净利润<span class="src">Schedule C</span></label><div class="money"><input type="text" inputmode="decimal" id="seProfit"></div><span class="hint">1099-NEC 收入减业务开支</span></div>
+            <div class="field"><label for="rental">出租房净收入<span class="src">Schedule E</span></label><div class="money"><input type="text" inputmode="decimal" id="rental"></div><span class="hint">租金减去折旧、利息、房产税等</span></div>
+            <div class="field"><label for="unemployment">失业金<span class="src">1099-G</span></label><div class="money"><input type="text" inputmode="decimal" id="unemployment"></div><span class="hint">联邦要交税，加州免税</span></div>
+            <div class="field"><label for="ssBenefits">社安金总额<span class="src">SSA-1099 box 5</span></label><div class="money"><input type="text" inputmode="decimal" id="ssBenefits"></div><span class="hint">联邦最多 85% 交税，加州全免</span></div>
+            <div class="field"><label for="retirement">退休金和 IRA 应税提款<span class="src">1099-R box 2a</span></label><div class="money"><input type="text" inputmode="decimal" id="retirement"></div></div>
+            <div class="field"><label for="otherInc">其他应税收入</label><div class="money"><input type="text" inputmode="decimal" id="otherInc"></div></div>
+          </div>
+        </fieldset>
+        <fieldset class="nr-only">
+          <legend>540NR：计入加州的收入<span class="src ca" style="margin-left:8px">Schedule CA (540NR) E 栏</span></legend>
+          <p class="legend-note">填“住在加州期间的全部收入”加上“不住加州期间来自加州的收入”。留空的项目会按居住月数比例估算，框里的灰字就是估算值。</p>
+          <div class="grid">
+            <div class="field"><label for="nrWages">工资</label><div class="money"><input type="text" inputmode="decimal" id="nrWages"></div><span class="hint">留空时用 W-2 box 16；在加州工作期间的工资都算</span></div>
+            <div class="field"><label for="nrInvest">利息、股息、资本利得</label><div class="money"><input type="text" inputmode="decimal" id="nrInvest"></div><span class="hint">按收到或卖出时你是否住在加州判断；不含美国国债利息</span></div>
+            <div class="field"><label for="nrSE">自雇收入</label><div class="money"><input type="text" inputmode="decimal" id="nrSE"></div><span class="hint">居民期间全部 + 非居民期间在加州提供服务的部分</span></div>
+            <div class="field"><label for="nrRental">出租收入</label><div class="money"><input type="text" inputmode="decimal" id="nrRental"></div><span class="hint">加州的房产全年都算；外州房产只算居民期间</span></div>
+            <div class="field"><label for="nrRetire">退休金、IRA 提款</label><div class="money"><input type="text" inputmode="decimal" id="nrRetire"></div><span class="hint">只算居民期间收到的</span></div>
+            <div class="field"><label for="nrOther">其他收入</label><div class="money"><input type="text" inputmode="decimal" id="nrOther"></div></div>
+          </div>
+        </fieldset>
+      </section>
+
+      <!-- 第 3 步 -->
+      <section class="step" data-pane="2" hidden>
+        <fieldset>
+          <legend>税前调整（Schedule 1 第二部分）</legend>
+          <div class="grid">
+            <div class="field"><label for="ira">传统 IRA 可抵扣供款</label><div class="money"><input type="text" inputmode="decimal" id="ira"></div><span class="hint">有公司 401(k) 且收入较高时可能不能抵扣</span></div>
+            <div class="field"><label for="hsa">个人 HSA 供款<span class="src">Form 8889</span></label><div class="money"><input type="text" inputmode="decimal" id="hsa"></div><span class="hint">不含工资单里扣的。加州不认可 HSA，会加回</span></div>
+            <div class="field"><label for="studentLoan">学生贷款利息<span class="src">1098-E</span></label><div class="money"><input type="text" inputmode="decimal" id="studentLoan"></div><span class="hint">最多 $2,500</span></div>
+            <div class="field"><label for="seHealth">自雇医疗保险费</label><div class="money"><input type="text" inputmode="decimal" id="seHealth"></div></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>分项扣除（Schedule A / 加州 Schedule CA 第二部分）</legend>
+          <p class="legend-note">系统会分别比较联邦和加州用标准扣除还是分项扣除更划算，两边可以选得不一样。</p>
+          <div class="grid">
+            <div class="field"><label for="medical">自付医疗费</label><div class="money"><input type="text" inputmode="decimal" id="medical"></div><span class="hint">超过 AGI 7.5% 的部分可扣</span></div>
+            <div class="field"><label for="propertyTax">自住房房产税</label><div class="money"><input type="text" inputmode="decimal" id="propertyTax"></div><span class="hint">联邦算进 SALT 上限，加州不设上限</span></div>
+            <div class="field"><label for="vlf">车辆牌照费（VLF 部分）<span class="src ca">DMV 账单</span></label><div class="money"><input type="text" inputmode="decimal" id="vlf"></div><span class="hint">DMV 年费里只有 VLF 那一行（车价 0.65%）可扣</span></div>
+            <div class="field"><label for="mortgageInt">房贷利息<span class="src">1098 box 1</span></label><div class="money"><input type="text" inputmode="decimal" id="mortgageInt"></div></div>
+            <div class="field"><label for="mortgageBal">房贷平均本金余额</label><div class="money"><input type="text" inputmode="decimal" id="mortgageBal"></div><span class="hint">联邦上限 $75 万，加州上限 $100 万</span></div>
+            <div class="field"><label for="charity">慈善捐款</label><div class="money"><input type="text" inputmode="decimal" id="charity"></div></div>
+            <div class="field"><label for="caMisc">工作相关未报销费用等<span class="src ca">只适用加州</span></label><div class="money"><input type="text" inputmode="decimal" id="caMisc"></div><span class="hint">联邦已取消；加州仍可扣超过 AGI 2% 的部分</span></div>
+          </div>
+          <label class="check"><input type="checkbox" id="mortgagePre2018">房贷是 2017 年 12 月 16 日之前签的（联邦上限按 $100 万）</label>
+        </fieldset>
+        <fieldset>
+          <legend>2025 年新增的联邦扣除</legend>
+          <p class="legend-note">小费、加班费、65 岁以上老人扣除会根据前面的填写自动计算。这几项加州都不跟进。</p>
+          <div class="grid">
+            <div class="field"><label for="carLoanInt">新车贷款利息</label><div class="money"><input type="text" inputmode="decimal" id="carLoanInt"></div><span class="hint">2025 年起购买的美国组装新车，最多 $10,000</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>加州 AMT<span class="src ca" style="margin-left:8px">Schedule P</span></legend>
+          <p class="legend-note">替代性最低税会自动计算。标准扣除、房产税、杂项扣除等调整项会自动加回，下面只需要填系统算不出来的项目。</p>
+          <div class="grid">
+            <div class="field"><label for="isoSpread">ISO 行权价差<span class="src ca">第 10 行</span></label><div class="money"><input type="text" inputmode="decimal" id="isoSpread"></div><span class="hint">行权日市价 − 行权价，再乘以股数；只算当年行权且年底前没卖的部分</span></div>
+            <div class="field"><label for="helocInt">非购房用途的房贷利息<span class="src ca">第 4 行</span></label><div class="money"><input type="text" inputmode="decimal" id="helocInt"></div><span class="hint">比如用 HELOC 买车、还信用卡的那部分利息</span></div>
+            <div class="field"><label for="amtOther">其他 AMT 调整项<span class="src ca">第 7–13 行</span></label><div class="money"><input type="text" inputmode="decimal" id="amtOther"></div><span class="hint">折旧差异、被动活动、K-1 上的 AMT 项目等，可以填负数</span></div>
+            <div class="field nr-only"><label for="nrIso">其中计入加州的 ISO 价差<span class="src ca">540NR 第 29d 行</span></label><div class="money"><input type="text" inputmode="decimal" id="nrIso"></div><span class="hint">留空按居住月数估算；非居民按授予到行权期间在加州工作的天数比例算</span></div>
+          </div>
+        </fieldset>
+      </section>
+
+      <!-- 第 4 步 -->
+      <section class="step" data-pane="3" hidden>
+        <fieldset>
+          <legend>联邦</legend>
+          <div class="grid">
+            <div class="field"><label for="fedWithheld">联邦预扣税<span class="src">W-2 box 2 + 1099</span></label><div class="money"><input type="text" inputmode="decimal" id="fedWithheld"></div></div>
+            <div class="field"><label for="fedEst">2025 联邦预缴税<span class="src">1040-ES</span></label><div class="money"><input type="text" inputmode="decimal" id="fedEst"></div></div>
+            <div class="field"><label for="fedOtherCredits">其他联邦不可退抵免</label><div class="money"><input type="text" inputmode="decimal" id="fedOtherCredits"></div><span class="hint">教育抵免、育儿费用抵免、太阳能抵免等</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>加州</legend>
+          <div class="grid">
+            <div class="field"><label for="caWithheld">加州预扣税<span class="src ca">W-2 box 17</span></label><div class="money"><input type="text" inputmode="decimal" id="caWithheld"></div></div>
+            <div class="field"><label for="sdiWithheld">CA SDI<span class="src ca">W-2 box 14</span></label><div class="money"><input type="text" inputmode="decimal" id="sdiWithheld"></div><span class="hint">2025 年税率 1.2%，不设工资上限；可算进联邦 SALT</span></div>
+            <div class="field"><label for="caEst">2025 加州预缴税<span class="src ca">540-ES</span></label><div class="money"><input type="text" inputmode="decimal" id="caEst"></div></div>
+            <div class="field"><label for="priorCAPaid">2025 年内补缴的 2024 加州税</label><div class="money"><input type="text" inputmode="decimal" id="priorCAPaid"></div><span class="hint">只影响联邦 SALT 扣除</span></div>
+            <div class="field"><label for="caOtherCredits">其他加州不可退抵免</label><div class="money"><input type="text" inputmode="decimal" id="caOtherCredits"></div><span class="hint">如加州育儿费用抵免；有 AMT 时这类抵免不能把税抵到暂定最低税以下</span></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>其他州税收抵免<span class="src ca" style="margin-left:8px">Schedule S</span></legend>
+          <p class="legend-note">同一笔收入加州和外州都征了税时填写。例如住在加州、去纽约出差工作；在外州有出租房；搬家那年。每个州填一行，金额以外州报税表为准。</p>
+          <div class="ostc-list" id="ostc-rows"></div>
+          <div><button type="button" id="ostc-add">添加一个州</button></div>
+        </fieldset>
+      </section>
+
+      <div class="step-nav">
+        <button type="button" id="prev">上一步</button>
+        <button type="button" id="next" class="primary">下一步</button>
+      </div>
+    </form>
+
+    <aside class="summary" aria-live="polite">
+      <div class="card">
+        <div class="lbl"><span>联邦 Form 1040</span><span class="pill" id="fed-pill"></span></div>
+        <div class="big num" id="fed-big"></div>
+        <div class="kv" id="fed-kv"></div>
+      </div>
+      <div class="card ca-card">
+        <div class="lbl"><span id="ca-form-label">California Form 540</span><span class="pill" id="ca-pill"></span></div>
+        <div class="big num" id="ca-big"></div>
+        <div class="kv" id="ca-kv"></div>
+      </div>
+      <div class="card">
+        <div class="lbl"><span>合计</span></div>
+        <div class="kv" id="tot-kv"></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="report">
+    <div class="steps" role="tablist" id="report-tabs">
+      <button type="button" role="tab" data-tab="ca" aria-selected="true" id="ca-tab-label">加州 540 逐行</button>
+      <button type="button" role="tab" data-tab="cadiff" aria-selected="false">加州与联邦差异</button>
+      <button type="button" role="tab" data-tab="caplus" aria-selected="false">加州税率、抵免与预缴</button>
+      <button type="button" role="tab" data-tab="fed" aria-selected="false">联邦 1040 逐行</button>
+      <button type="button" role="tab" data-tab="notes" aria-selected="false">提醒 <span id="note-count" class="num"></span></button>
+    </div>
+    <div class="tabpane" data-tabpane="ca"></div>
+    <div class="tabpane" data-tabpane="cadiff" hidden></div>
+    <div class="tabpane" data-tabpane="caplus" hidden></div>
+    <div class="tabpane" data-tabpane="fed" hidden></div>
+    <div class="tabpane" data-tabpane="notes" hidden></div>
+  </section>
+
+  <footer>
+    参数依据：IRS 2025 年通胀调整（Rev. Proc. 2024-40）和 2025 年 7 月 OBBBA 法案的修改；加州税率表、标准扣除、免税额抵免、租房抵免门槛来自
+    <a href="https://www.ftb.ca.gov/about-ftb/newsroom/tax-news/2025/10.html" target="_blank" rel="noopener">FTB Tax News 2025 年 10 月</a>，CalEITC 查表和 YCTC 来自
+    <a href="https://www.ftb.ca.gov/forms/2025/2025-3514-booklet.html" target="_blank" rel="noopener">FTB 3514 说明</a>中的 2025 Earned Income Tax Credit Table（658 档全表）。
+    加州高收入扣除与抵免递减门槛是按 3.0% 通胀推算的估计值。本工具用于估算和核对，不能替代正式报税软件或 CPA，加州 AMT 按 FTB 2025 Schedule P 计算。540NR 的收入来源划分和 Schedule S 的外州税额需要你自己按外州报税表填写。不计算联邦 AMT（Form 6251）、外国税收抵免和 AMT 抵免结转（FTB 3510）。
+  </footer>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  const T = window.TaxEngine;
+  const $ = (id) => document.getElementById(id);
+  const fmt = T.fmt;
+  const pct = (x) => (x * 100).toFixed(x * 100 % 1 ? 1 : 0) + '%';
+  const STORE = 'ca-tax-2025-draft';
+
+  const NUM_FIELDS = ['kidsU17', 'kidsU6', 'otherDeps', 'wages', 'caWages', 'box12W', 'tips', 'overtime', 'taxableInt', 'treasuryInt',
+    'caMuniInt', 'otherMuniInt', 'ordDiv', 'qualDiv', 'stGain', 'ltGain', 'seProfit', 'rental', 'unemployment', 'ssBenefits',
+    'retirement', 'otherInc', 'ira', 'hsa', 'studentLoan', 'seHealth', 'medical', 'propertyTax', 'vlf', 'mortgageInt',
+    'mortgageBal', 'charity', 'caMisc', 'carLoanInt', 'fedWithheld', 'fedEst', 'fedOtherCredits', 'caWithheld', 'sdiWithheld',
+    'caEst', 'priorCAPaid', 'caOtherCredits', 'isoSpread', 'helocInt', 'amtOther'];
+  const NR_FIELDS = ['nrWages', 'nrInvest', 'nrSE', 'nrRental', 'nrRetire', 'nrOther', 'nrIso'];
+  const BOOL_FIELDS = ['self65', 'selfBlind', 'spouse65', 'spouseBlind', 'caRenter', 'mortgagePre2018'];
+
+  const SAMPLE = {
+    status: 'single', caResidency: 'full',
+    wages: 128000, caWages: 129500, box12W: 1500,
+    taxableInt: 1200, treasuryInt: 400, ordDiv: 2400, qualDiv: 1800, stGain: -800, ltGain: 6000,
+    caRenter: false, fedWithheld: 17500, caWithheld: 8200, sdiWithheld: 1554, vlf: 220,
+  };
+  const STATUS_LABEL = { single: '单身', mfj: '已婚合并', mfs: '已婚分开', hoh: '户主', qss: '丧偶有子女' };
+
+  let isSample = true;
+
+  // ---------- Schedule S 行 ----------
+  const STATE_OPTS = Object.keys(T.STATE_NAMES).sort((a, b) => T.STATE_NAMES[a].localeCompare(T.STATE_NAMES[b]))
+    .map((k) => `<option value="${k}">${T.STATE_NAMES[k]} (${k})${T.OSTC.noIncomeTax.includes(k) ? ' · 无所得税' : ''}</option>`).join('');
+  let ostcSeq = 0;
+  function addOstcRow(data) {
+    const box = $('ostc-rows');
+    if (box.children.length >= 6) return;
+    const id = 'ostc' + (ostcSeq++);
+    const v = (x) => (x ? Number(x).toLocaleString('en-US') : '');
+    const el = document.createElement('div');
+    el.className = 'ostc-row';
+    el.dataset.row = id;
+    el.innerHTML = `
+      <div class="ostc-head">
+        <div class="field" style="flex:1 1 220px"><label for="${id}-state">州</label>
+          <select id="${id}-state"><option value="">选择一个州</option>${STATE_OPTS}</select></div>
+        <button type="button" class="link" data-remove="${id}">删除这一行</button>
+      </div>
+      <div class="grid">
+        <div class="field"><label for="${id}-ca">双重征税的收入<span class="src ca">第 3 行</span></label><div class="money"><input type="text" inputmode="decimal" id="${id}-ca"></div><span class="hint">加州也征税的那部分，例如在该州工作期间的工资</span></div>
+        <div class="field"><label for="${id}-tax">外州净税额<span class="src">第 7 行</span></label><div class="money"><input type="text" inputmode="decimal" id="${id}-tax"></div><span class="hint">外州报税表上扣完抵免后的税，不含城市税</span></div>
+        <div class="field"><label for="${id}-oinc">外州对这部分收入征税的金额<span class="src">第 8 行</span></label><div class="money"><input type="text" inputmode="decimal" id="${id}-oinc"></div><span class="hint">留空 = 和第 3 行相同</span></div>
+        <div class="field"><label for="${id}-oagi">外州征税的 AGI<span class="src">第 9 行</span></label><div class="money"><input type="text" inputmode="decimal" id="${id}-oagi"></div><span class="hint">加州居民：只填外州征税的收入，留空 = 第 8 行；非居民：填居住州的全部 AGI</span></div>
+      </div>
+      <div class="ostc-status" id="${id}-status"></div>`;
+    box.appendChild(el);
+    $(`${id}-state`).value = (data && data.state) || '';
+    $(`${id}-ca`).value = v(data && data.caIncome);
+    $(`${id}-tax`).value = v(data && data.otherTax);
+    $(`${id}-oinc`).value = v(data && data.otherIncome);
+    $(`${id}-oagi`).value = v(data && data.otherAGI);
+    $('ostc-add').disabled = box.children.length >= 6;
+  }
+  function readOstc() {
+    return [...$('ostc-rows').children].map((el) => {
+      const id = el.dataset.row;
+      return { idx: id, state: $(`${id}-state`).value, caIncome: parseNum($(`${id}-ca`).value), otherTax: parseNum($(`${id}-tax`).value),
+               otherIncome: parseNum($(`${id}-oinc`).value), otherAGI: parseNum($(`${id}-oagi`).value) };
+    }).filter((x) => x.state || x.caIncome || x.otherTax);
+  }
+  $('ostc-add').addEventListener('click', () => { addOstcRow(); isSample = false; render(); });
+  $('ostc-rows').addEventListener('click', (e) => {
+    const id = e.target.dataset && e.target.dataset.remove;
+    if (!id) return;
+    document.querySelector(`[data-row="${id}"]`).remove();
+    $('ostc-add').disabled = false;
+    isSample = false;
+    render();
+  });
+
+  function parseNum(v) {
+    const x = parseFloat(String(v).replace(/[$,\s]/g, ''));
+    return Number.isFinite(x) ? x : 0;
+  }
+  function fill(data) {
+    $('status').value = data.status || 'single';
+    // 兼容旧版保存的 caResident: yes / no
+    $('caResidency').value = data.caResidency || (data.caResident === 'no' ? 'part' : 'full');
+    $('caMonths').value = data.caMonths || '';
+    NUM_FIELDS.forEach((k) => { $(k).value = data[k] ? Number(data[k]).toLocaleString('en-US') : ''; });
+    NR_FIELDS.forEach((k) => { $(k).value = typeof data[k] === 'number' ? data[k].toLocaleString('en-US') : ''; });
+    BOOL_FIELDS.forEach((k) => { $(k).checked = !!data[k]; });
+    $('ostc-rows').innerHTML = '';
+    (Array.isArray(data.ostc) ? data.ostc : []).forEach((row) => addOstcRow(row));
+    $('ostc-add').disabled = $('ostc-rows').children.length >= 6;
+  }
+  function read() {
+    const d = { status: $('status').value, caResidency: $('caResidency').value, caMonths: parseNum($('caMonths').value) };
+    NUM_FIELDS.forEach((k) => { d[k] = parseNum($(k).value); });
+    // 540NR 栏位留空表示“按月份估算”，所以只在有填写时才传
+    NR_FIELDS.forEach((k) => { if ($(k).value.trim() !== '') d[k] = parseNum($(k).value); });
+    d.ostc = readOstc();
+    BOOL_FIELDS.forEach((k) => { d[k] = $(k).checked; });
+    return d;
+  }
+  function save(d) {
+    try { localStorage.setItem(STORE, JSON.stringify({ isSample, d })); } catch (e) { /* 无痕模式等情况下忽略 */ }
+  }
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); return s && s.d ? s : null; } catch (e) { return null; }
+  }
+
+  // ---------- 渲染工具 ----------
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function rows(list) {
+    return list.map((r) => {
+      if (!r) return '';
+      const [line, label, amt, cls] = r;
+      return `<tr class="${cls || ''}"><td class="line">${esc(line)}</td><td>${label}</td><td class="amt">${amt === null ? '' : fmt(amt)}</td></tr>`;
+    }).join('');
+  }
+  function table(head, body) {
+    return `<div class="table-wrap"><table><thead><tr><th>行</th><th>${head}</th><th class="amt">金额</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  }
+  function kv(pairs) { return pairs.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join(''); }
+  function setResult(prefix, refund) {
+    const big = $(prefix + '-big'), pill = $(prefix + '-pill');
+    const r = Math.round(refund);
+    big.textContent = fmt(Math.abs(r));
+    big.className = 'big num ' + (r >= 0 ? 'refund-c' : 'owe-c');
+    pill.textContent = r >= 0 ? '预计退税' : '需要补税';
+    pill.className = 'pill ' + (r >= 0 ? 'refund' : 'owe');
+  }
+
+  // ---------- 主渲染 ----------
+  function render() {
+    const d = read();
+    const s = d.status;
+    document.querySelectorAll('.spouse-only').forEach((el) => { el.hidden = s !== 'mfj'; });
+    document.querySelectorAll('.nr-only').forEach((el) => { el.hidden = d.caResidency === 'full'; });
+    document.querySelectorAll('.nr-part-only').forEach((el) => { el.hidden = d.caResidency !== 'part'; });
+    const r = T.compute(d);
+    const isNR = !!r.ca.nr;
+    [...$('ostc-rows').children].forEach((el) => {
+      const st = $(`${el.dataset.row}-status`);
+      const row = r.ca.ostcRows.find((x) => x.idx === el.dataset.row);
+      if (!row || !row.state) { st.textContent = ''; st.className = 'ostc-status'; return; }
+      st.textContent = row.ok ? `可抵免 ${fmt(row.credit)}${row.caveat ? '（' + row.caveat + '）' : ''}` : `不能抵免：${row.reason}`;
+      st.className = 'ostc-status ' + (row.ok ? 'ok' : 'no');
+    });
+    $('ca-form-label').textContent = isNR ? 'California Form 540NR' : 'California Form 540';
+    $('ca-tab-label').textContent = isNR ? '加州 540NR 逐行' : '加州 540 逐行';
+    if (isNR) {
+      const keys = { nrWages: 'wages', nrInvest: 'invest', nrSE: 'se', nrRental: 'rental', nrRetire: 'retire', nrOther: 'other' };
+      NR_FIELDS.forEach((k) => {
+        const v = k === 'nrIso' ? (r.ca.amtNR ? r.ca.amtNR.isoCA : 0) : r.ca.nr.src[keys[k]];
+        $(k).placeholder = Math.round(v || 0).toLocaleString('en-US');
+      });
+    }
+    const f = r.fed, c = r.ca;
+    save(d);
+    $('sample-banner').hidden = !isSample;
+
+    setResult('fed', f.refund);
+    setResult('ca', c.refund);
+    $('fed-kv').innerHTML = kv([
+      ['AGI', fmt(f.agi)], ['应税所得', fmt(f.taxable)], ['应缴税合计', fmt(f.totalTax)], ['已付与可退抵免', fmt(f.payments)],
+      ['边际 / 实际税率', `${pct(f.marginal)} / ${pct(f.effective)}`],
+    ]);
+    $('ca-kv').innerHTML = kv([
+      c.nr ? ['加州来源 AGI', fmt(c.nr.srcAGI)] : ['加州 AGI', fmt(c.agi)], ['应税所得', fmt(c.taxable)], ['应缴税合计', fmt(c.totalTax)], ['已付与可退抵免', fmt(c.payments)],
+      ['边际 / 实际税率', `${pct(c.marginal)} / ${pct(c.effective)}`],
+    ]);
+    const totalTax = f.totalTax + c.totalTax;
+    $('tot-kv').innerHTML = kv([
+      ['联邦 + 加州所得税', fmt(totalTax)],
+      ['CA SDI（另计，不退）', fmt(d.sdiWithheld || c.sdiExpected)],
+      ['综合边际税率', pct(f.marginal + c.marginal)],
+      ['净结果', `<b class="${f.refund + c.refund >= 0 ? 'refund-c' : 'owe-c'}">${f.refund + c.refund >= 0 ? '退' : '补'} ${fmt(Math.abs(f.refund + c.refund))}</b>`],
+    ]);
+
+    renderCA(r, d);
+    renderDiff(r, d);
+    renderCAPlus(r, d);
+    renderFed(r, d);
+    const notes = r.warnings;
+    $('note-count').textContent = notes.length ? `(${notes.length})` : '';
+    pane('notes').innerHTML = notes.length
+      ? `<ul class="notes">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>`
+      : '<p class="muted">根据你填写的内容，没有需要特别注意的地方。</p>';
+    lastResult = { r, d };
+  }
+  let lastResult = null;
+  const pane = (k) => document.querySelector(`[data-tabpane="${k}"]`);
+
+  function renderCA(r, d) {
+    const c = r.ca;
+    if (c.nr) return renderNR(r, d);
+    const body = rows([
+      ['13', '联邦 AGI（1040 第 11 行）', c.fedAGI],
+      ['14', '减项（Schedule CA 第 I 部分 B 栏）', -c.subTotal, 'sub'],
+      ['15', '加州所得小计', c.fedAGI - c.subTotal],
+      ['16', '加项（Schedule CA 第 I 部分 C 栏）', c.addTotal, 'sub'],
+      ['17', '加州 AGI', c.agi, 'total'],
+      ['18', c.itemizes ? '加州分项扣除（比标准扣除多）' : `加州标准扣除（${STATUS_LABEL[r.status]}）`, -c.deduction],
+      ['19', '加州应税所得', c.taxable, 'total'],
+      ['31', '按税率表计算的税额', c.tax],
+      ['32', `免税额抵免：${c.personalN + c.seniorN + c.blindN} 份个人/老年/失明 + ${c.depN} 份受抚养人`, -c.exemption, 'sub'],
+      c.ostc ? ['43', `其他州税收抵免 Schedule S（代码 187：${c.ostcRows.filter((x) => x.credit).map((x) => x.state).join('、')}）`, -c.ostc, 'sub'] : null,
+      c.renterAllowed ? ['46', '租房抵免 Renter\'s Credit', -c.renterAllowed, 'sub'] : null,
+      c.otherAllowed ? ['', '其他不可退抵免', -c.otherAllowed, 'sub'] : null,
+      c.amt ? ['61', '加州 AMT（Schedule P 第 26 行）', c.amt] : null,
+      c.mhst ? ['62', '行为健康服务税（应税所得超过 $100 万的部分 1%）', c.mhst] : null,
+      ['64', '加州应缴税合计', c.totalTax, 'total'],
+      ['71', '加州预扣税（W-2 box 17）', c.withheld],
+      c.est ? ['72', '2025 预缴税', c.est] : null,
+      c.calEitc ? ['75', `加州劳动所得抵免 CalEITC（FTB 3514 查表，${c.eitcKids} 个孩子）`, c.calEitc] : null,
+      c.yctc ? ['76', 'Young Child Tax Credit（可退还）', c.yctc] : null,
+      ['', '已付与可退抵免合计', c.payments, 'total'],
+      ['97 / 100', c.refund >= 0 ? '退税' : '补税', Math.abs(c.refund), 'total'],
+    ]);
+    pane('ca').innerHTML = `
+      <div><h2>加州 Form 540</h2><p class="muted small">行号对应 2025 年 Form 540。全年居民适用；部分年份居民请用 540NR。</p></div>
+      ${table('项目', body)}
+      <div class="cols">
+        <div>
+          <h3>扣除：标准还是分项？</h3>
+          ${table('加州分项扣除明细', rows([
+            ['', '医疗费（超过加州 AGI 7.5% 的部分）', c.medical],
+            ['', '房产税 + VLF（加州不设 SALT 上限，州所得税和 SDI 不能扣）', c.taxesDed],
+            ['', '房贷利息（本金上限 $100 万）', c.mortgage],
+            ['', '慈善捐款', c.charity],
+            ['', '杂项（超过 AGI 2% 的部分，联邦已取消）', c.misc],
+            c.itemLimit ? ['', `高收入分项扣除递减（AGI 超过 ${fmt(c.phaseThr)}）`, -c.itemLimit, 'sub'] : null,
+            ['', '分项扣除合计', c.itemized, 'total'],
+            ['', '标准扣除', c.std],
+          ]))}
+          <p class="small muted">${c.itemizes ? '分项扣除更多，加州选用分项。' : '标准扣除更多，加州选用标准扣除。'}加州可以和联邦选得不一样。</p>
+        </div>
+        <div>
+          <h3>免税额抵免</h3>
+          ${table('Form 540 第 7–10 行', rows([
+            ['7', `个人（${c.personalN} × $153）`, c.personalN * 153],
+            c.blindN ? ['8', `失明（${c.blindN} × $153）`, c.blindN * 153] : null,
+            c.seniorN ? ['9', `65 岁以上（${c.seniorN} × $153）`, c.seniorN * 153] : null,
+            c.depN ? ['10', `受抚养人（${c.depN} × $475）`, c.depN * 475] : null,
+            c.exReduce ? ['', `高收入递减：每份减 $${c.exReduce}`, -( (c.personalN + c.seniorN + c.blindN) * 153 + c.depN * 475 - c.exemption ), 'sub'] : null,
+            ['32', '免税额抵免合计', c.exemption, 'total'],
+          ]))}
+        </div>
+      </div>`;
+  }
+
+  function renderNR(r, d) {
+    const c = r.ca, n = c.nr;
+    const label = { wages: '工资', invest: '利息、股息、资本利得', se: '自雇收入', rental: '出租收入', retire: '退休金、IRA', other: '其他收入' };
+    const howTxt = { input: '你填写的', box16: 'W-2 box 16', months: `按 ${n.months} / 12 月估算` };
+    const srcRows = Object.keys(n.tot).filter((k) => n.tot[k] || n.src[k]).map((k) =>
+      `<tr><td>${label[k]}</td><td class="amt">${fmt(n.tot[k])}</td><td class="amt">${fmt(n.src[k])}</td><td class="small muted">${howTxt[n.how[k]]}</td></tr>`).join('');
+    const body = rows([
+      ['13', '联邦 AGI', c.fedAGI],
+      ['17', '全部收入按加州法律计算的 AGI（当作全年居民）', c.agi],
+      ['18', c.itemizes ? '加州分项扣除（全额）' : '加州标准扣除（全额）', -c.deduction],
+      ['19', '总应税所得', n.totalTaxable, 'total'],
+      ['31', '总应税所得按税率表计算的税', n.taxOnTotal],
+      ['32', '加州来源 AGI（Schedule CA (540NR) E 栏）', n.srcAGI],
+      ['', `扣除按比例折算：${fmt(c.deduction)} × ${n.dedPct.toFixed(4)}`, -n.dedProrated, 'sub'],
+      ['35', '加州应税所得', n.taxable, 'total'],
+      ['36', `加州税率 = 第 31 行 ÷ 第 19 行 = ${(n.rate * 100).toFixed(2)}%`, null],
+      ['37', '加州税额 = 第 35 行 × 第 36 行', n.tax],
+      ['38', `免税额抵免比例 = 第 35 行 ÷ 第 19 行 = ${n.exPct.toFixed(4)}`, null],
+      ['39', `按比例的免税额抵免（全额 ${fmt(n.exFull)}）`, -c.exAllowed, 'sub'],
+      c.ostc ? ['50', `其他州税收抵免 Schedule S（代码 187：${c.ostcRows.filter((x) => x.credit).map((x) => x.state).join('、')}）`, -c.ostc, 'sub'] : null,
+      c.renterAllowed ? ['61', '租房抵免（不按比例）', -c.renterAllowed, 'sub'] : null,
+      c.otherAllowed ? ['', '其他不可退抵免', -c.otherAllowed, 'sub'] : null,
+      c.amt ? ['71', '加州 AMT（Schedule P (540NR) 第 45 行）', c.amt] : null,
+      c.mhst ? ['72', '行为健康服务税（第 35 行超过 $100 万的部分 1%）', c.mhst] : null,
+      ['', '加州应缴税合计', c.totalTax, 'total'],
+      ['', '加州预扣税（W-2 box 17）', c.withheld],
+      c.est ? ['', '2025 预缴税', c.est] : null,
+      c.calEitc ? ['85', `CalEITC（${fmt(c.calEitcFull)} × ${c.eitcFactor.toFixed(4)}）`, c.calEitc] : null,
+      c.yctc ? ['86', `YCTC（${fmt(c.yctcFull)} × ${c.eitcFactor.toFixed(4)}）`, c.yctc] : null,
+      ['', '已付与可退抵免合计', c.payments, 'total'],
+      ['', c.refund >= 0 ? '退税' : '补税', Math.abs(c.refund), 'total'],
+    ]);
+    const who = c.residency === 'part' ? `部分年份居民，在加州住了 ${n.months} 个月` : '非居民，只对加州来源收入纳税';
+    pane('ca').innerHTML = `
+      <div><h2>加州 Form 540NR</h2><p class="muted small">${who}。先把全部收入当作全年居民算出平均税率，再乘以加州来源的应税所得。</p></div>
+      ${table('项目', body)}
+      <div class="cols">
+        <div>
+          <h3>收入划分（Schedule CA (540NR) 第 II 部分）</h3>
+          <div class="table-wrap"><table><thead><tr><th>项目</th><th class="amt">D 栏 全部</th><th class="amt">E 栏 计入加州</th><th>来源</th></tr></thead><tbody>
+            ${srcRows}
+            ${n.adjCA ? `<tr class="sub"><td>税前调整（按收入比例分摊）</td><td class="amt">${fmt(-n.adjCA)}</td><td class="amt">${fmt(-n.adjSrc)}</td><td></td></tr>` : ''}
+            <tr class="total"><td>AGI</td><td class="amt">${fmt(c.agi)}</td><td class="amt">${fmt(n.srcAGI)}</td><td></td></tr>
+          </tbody></table></div>
+          <p class="small muted">要改 E 栏的数字，去第 2 步最下面的“540NR：计入加州的收入”。</p>
+        </div>
+        <div>
+          <h3>540NR 和全年居民的区别</h3>
+          <ul class="notes">
+            <li>外州收入不在加州交税，但会算进总收入，用来决定你的平均税率（第 36 行）。</li>
+            <li>标准扣除或分项扣除按 E 栏 ÷ D 栏的比例折算（Part IV 第 3 行）。</li>
+            <li>免税额抵免、CalEITC、YCTC 按第 38 行比例打折；租房抵免不打折，但必须在加州住满 6 个月。</li>
+            <li>搬离加州后卖出的股票、收到的退休金一般不算加州收入；搬来之前在外州赚的钱也不算。</li>
+            <li>如果同一笔收入加州和外州都征税，在第 4 步填 Schedule S 申请其他州税收抵免。</li>
+          </ul>
+        </div>
+      </div>`;
+  }
+
+  function renderDiff(r, d) {
+    const c = r.ca, f = r.fed;
+    const items = [
+      [c.sub.ssTaxable, '社安金', '加州不对社安金征税', 'sub'],
+      [c.sub.unemployment, '失业金', '加州不对失业金征税', 'sub'],
+      [c.sub.treasury, '美国国债利息', '州政府不能对联邦债利息征税', 'sub'],
+      [c.add.hsa, '个人 HSA 供款', '加州不承认 HSA，联邦扣掉的要加回', 'add'],
+      [c.add.hsaEmployer, 'W-2 12W 栏 HSA 供款', '工资单里的 HSA 联邦免税，加州要交', 'add'],
+      [c.add.otherMuni, '外州市政债利息', '只有加州本地发行的市政债在加州免税', 'add'],
+    ].filter((x) => x[0]);
+    const diffRows = items.map(([amt, name, why, kind]) =>
+      `<tr><td>${name}</td><td class="small muted">${why}</td><td class="amt ${kind === 'add' ? 'diff-add' : 'diff-sub'}">${kind === 'add' ? '+' : '−'}${fmt(amt).replace('-', '')}</td></tr>`).join('');
+
+    const below = [
+      ['标准扣除', fmt(f.std), fmt(c.std), '加州标准扣除只有联邦的三分之一左右'],
+      ['州和地方税 (SALT)', `${fmt(f.salt)}（上限 ${fmt(f.saltCap)}）`, `${fmt(c.taxesDed)}（无上限）`, '加州不能扣州所得税和 SDI，但房产税不设上限'],
+      ['房贷利息', fmt(f.mortgage), fmt(c.mortgage), '联邦按 $75 万本金，加州按 $100 万'],
+      ['杂项扣除', '不允许', fmt(c.misc), '加州仍保留 2% 门槛的杂项扣除'],
+      ['小费 / 加班费扣除', fmt(f.tipsDed + f.otDed), '不适用', '2025 联邦新规，加州未跟进'],
+      ['65 岁以上额外 $6,000', fmt(f.seniorDed), '不适用', '加州改用 $153 老年免税额抵免'],
+      ['新车贷款利息', fmt(f.carDed), '不适用', '2025 联邦新规'],
+      ['QBI 20% 扣除', fmt(f.qbiDed), '不适用', '加州不跟进 199A'],
+      ['长期资本利得 / 合格股息', '0 / 15 / 20% 优惠税率', '按普通收入 1%–12.3%', '在加州卖股票没有长期优惠'],
+      ['子女抵免', `${fmt(f.ctcUsed + f.actc)}（每孩 $2,200）`, `${fmt(c.depN * 475)} 起（每人 $475）`, '加州另有 6 岁以下 YCTC'],
+    ];
+    pane('cadiff').innerHTML = `
+      <div><h2>加州为什么和联邦不一样</h2><p class="muted small">加州从联邦 AGI 出发，通过 Schedule CA 加减调整得到加州 AGI，之后的扣除和税率都按加州自己的规则算。</p></div>
+      <div>
+        <h3>收入调整（Schedule CA 第 I 部分）</h3>
+        ${items.length ? `<div class="table-wrap"><table><thead><tr><th>项目</th><th>原因</th><th class="amt">对加州 AGI</th></tr></thead><tbody>${diffRows}
+          <tr class="total"><td>联邦 AGI ${fmt(c.fedAGI)} → 加州 AGI</td><td></td><td class="amt">${fmt(c.agi)}</td></tr></tbody></table></div>`
+          : `<p class="muted">你的收入在联邦和加州之间没有调整项，加州 AGI 等于联邦 AGI（${fmt(c.agi)}）。</p>`}
+      </div>
+      <div>
+        <h3>扣除与税率</h3>
+        <div class="table-wrap"><table><thead><tr><th>项目</th><th class="amt">联邦</th><th class="amt">加州</th><th>说明</th></tr></thead><tbody>
+          ${below.map((b) => `<tr><td>${b[0]}</td><td class="amt">${b[1]}</td><td class="amt">${b[2]}</td><td class="small muted">${b[3]}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>`;
+  }
+
+  function renderCAPlus(r, d) {
+    const c = r.ca, f = r.fed;
+    const maxTax = Math.max(1, ...c.brackets.map((b) => b.tax));
+    const brRows = c.brackets.map((b) => `<tr${b.amount ? '' : ' class="sub"'}>
+        <td class="amt">${pct(b.rate)}</td>
+        <td class="amt">${fmt(b.from)} – ${b.to === Infinity ? '以上' : fmt(b.to)}</td>
+        <td class="amt">${fmt(b.amount)}</td>
+        <td class="amt">${fmt(b.tax)}</td>
+        <td style="width:30%"><div class="bar" style="width:${(b.tax / maxTax * 100).toFixed(1)}%"></div></td></tr>`).join('');
+
+    const credits = [
+      ['免税额抵免', fmt(c.exemption), '所有人都有，自动计算'],
+      ['租房抵免', c.renter ? fmt(c.renter) : (c.renterAsked ? `不符合（加州 AGI 超过 ${fmt(c.renterLimit)}）` : '未勾选租房'), `加州 AGI ≤ ${fmt(c.renterLimit)}`],
+      ['Young Child Tax Credit', c.yctc ? fmt(c.yctc) : '不符合', '需有 6 岁以下子女、符合 CalEITC，劳动所得 ≤ $32,901'],
+      ['CalEITC', c.calEitc ? fmt(c.calEitc) : '不符合', '劳动所得 $1–$32,900，投资收入 ≤ $4,814，可退还'],
+      ['加州 AMT', c.amt ? fmt(c.amt) : '不需要缴纳', `暂定最低税 ${fmt(c.cmpTMT)} vs 正常税额 ${fmt(c.nr ? c.nr.tax : c.tax)}`],
+      ['其他州税收抵免', c.ostc ? fmt(c.ostc) : (c.ostcRows.length ? '不符合' : '未填写'), '同一笔收入被外州征税，见下方 Schedule S'],
+      ['行为健康服务税', c.mhst ? fmt(c.mhst) : '不涉及', '加州应税所得超过 $100 万的部分加 1%（原名心理健康服务税）'],
+    ];
+
+    const sdiNote = c.sdiWithheld
+      ? `W-2 box 14 显示 ${fmt(c.sdiWithheld)}，按 1.2% × 加州工资 ${fmt(c.caWages)} 应为 ${fmt(c.sdiExpected)}。`
+      : `按 1.2% × 加州工资 ${fmt(c.caWages)}，SDI 约为 ${fmt(c.sdiExpected)}。`;
+
+    const calRow = (x) => { const k = Math.ceil(Math.round(x) / 50); return `${fmt(k * 50 - 49)} – ${fmt(k * 50)}`; };
+    let eitcBlock;
+    if (c.calEitc) {
+      eitcBlock = `${table('FTB 3514 工作表', rows([
+        ['19', `加州劳动所得（W-2 box 16 ${fmt(c.caWages)} + 自雇净收入）`, c.earned],
+        ['', `查表：${calRow(c.earned)} 档，${c.eitcKids} 个孩子一栏`, c.calEitcByEarned, 'sub'],
+        ['', '联邦 AGI', c.fedAGI],
+        c.calEitcByAGI !== null ? ['', `AGI 与劳动所得不同，再按 AGI 查表：${calRow(c.fedAGI)} 档`, c.calEitcByAGI, 'sub'] : null,
+        ['20', 'CalEITC（取两者较小值）', c.calEitc, 'total'],
+      ]))}
+      ${c.eitcFactor < 1 ? `<p class="small">540NR：查表金额 ${fmt(c.calEitcFull)} × 免税额抵免比例 ${c.eitcFactor.toFixed(4)} = ${fmt(c.calEitc)}（FTB 3514 第 21–22 行）。</p>` : ''}
+      <p class="small muted">同一栏最高 ${fmt(c.calEitcMax[c.eitcKids])}。CalEITC 可退还，没有税要交也能拿到退款。</p>`;
+    } else {
+      const why = c.earned <= 0 ? '没有劳动所得（工资或自雇收入）'
+        : c.earned > 32900 ? `加州劳动所得 ${fmt(c.earned)} 超过 $32,900`
+        : c.inv > 4814 ? `投资收入 ${fmt(c.inv)} 超过 $4,814`
+        : r.status === 'mfs' ? '已婚分开申报（分居特殊规则除外）'
+        : c.months <= 6 ? '一年中在加州居住不超过 6 个月'
+        : `联邦 AGI ${fmt(c.fedAGI)} 查表结果为 0`;
+      eitcBlock = `<p class="small">不符合：${why}。</p>
+        <p class="small muted">按孩子数（0 / 1 / 2 / 3+）最高可领 ${c.calEitcMax.map(fmt).join(' / ')}，劳动所得上限 $32,900。</p>`;
+    }
+
+    const P = c.pI;
+    const amtRows = [
+      ['1', '标准扣除（AMT 不允许）', P.l1],
+      ['2', '医疗费（AMT 门槛 10%，加回 2.5% AGI 部分）', P.l2],
+      ['3', '房产税等（AMT 不允许）', P.l3],
+      ['4', '非购房用途的房贷利息', P.l4],
+      ['5', '杂项分项扣除', P.l5],
+      ['10', 'ISO 行权价差', P.l10],
+      ['7–13', '其他调整与优惠项', P.l13],
+      ['14', '调整项合计', P.l14, 'total'],
+      ['15', '加州应税所得（540 第 19 行）', P.l15],
+      ['17', 'AMTI 排除：自雇生意收入', -P.l17],
+      ['18', '分项扣除递减（AMT 不适用，减回）', P.l18],
+      ['21', '替代性最低应税所得 AMTI', P.l21, 'total'],
+      ['22', `豁免额（AMTI 超过 ${fmt(T.CA.amt.phase[r.status])} 后每多 $1 减 $0.25）`, -c.amtEx],
+      ['23', '第 21 行 − 第 22 行', c.amtBase],
+      ['24', '暂定最低税 TMT = 第 23 行 × 7%', c.tmt, 'total'],
+    ].filter((x) => x[3] === 'total' || ['15', '22', '23'].includes(x[0]) || x[2]);
+    let nrAmtRows = [];
+    if (c.amtNR) {
+      const a = c.amtNR;
+      nrAmtRows = [
+        ['25', '加州来源 AGI', a.l25],
+        a.l27 ? ['27', 'AMTI 排除（加州部分的自雇收入）', -a.l27] : null,
+        ['29', `加州部分的调整项（ISO ${fmt(a.isoCA)} 等）`, a.l29],
+        ['32', '加州 AMT AGI', a.l32],
+        a.l39 ? ['39', `按比例的 AMT 分项扣除（比例 ${a.l38.toFixed(4)}）`, -a.l39] : null,
+        ['40', '加州 AMTI', a.l40, 'total'],
+        ['42', `加州 AMT 税率 = TMT ÷ 全部 AMTI = ${(a.l42 * 100).toFixed(2)}%`, null],
+        ['43', '加州 TMT', a.l43],
+        ['44', '正常税额（540NR 第 37 行）', -a.l44],
+        ['45', '加州 AMT', c.amt, 'total'],
+      ].filter(Boolean);
+    } else {
+      nrAmtRows = [
+        ['25', '正常税额（540 第 31 行）', -c.tax],
+        ['26', '加州 AMT', c.amt, 'total'],
+      ];
+    }
+    const amtBlock = `${table('Schedule P 第 I–II 部分', rows([...amtRows, ...nrAmtRows]))}
+      <p class="small muted">${c.amt ? `需要缴纳 ${fmt(c.amt)} 的 AMT。` : `暂定最低税没有超过正常税额，不用缴 AMT。`}AMT 只能被少数抵免抵减；租房抵免、其他州税收抵免只能抵正常税。行使 ISO 产生的 AMT 可以在以后年度用 FTB 3510 抵免拿回一部分。</p>`;
+
+    let sBlock;
+    if (c.ostcRows.length) {
+      sBlock = c.ostcRows.map((x) => `
+        <div>
+          <h3>${esc(x.name || '未选州')} ${x.ok ? `<span class="pill refund">可抵免 ${fmt(x.credit)}</span>` : '<span class="pill owe">不能抵免</span>'}</h3>
+          ${x.ok ? table('Schedule S 第 II 部分', [
+            ['2', '加州税额（未计其他州抵免）', x.line2],
+            ['3', '双重征税的收入', x.line3],
+            ['4', c.nr ? '加州来源 AGI（540NR 第 32 行）' : '加州 AGI（540 第 17 行）', x.line4],
+            ['5', `第 3 行 ÷ 第 4 行 = ${x.line5.toFixed(4)}`, null],
+            ['6', '加州对这部分收入征的税', x.line6],
+            ['7', '外州净税额', x.line7],
+            ['8', '外州对这部分收入征税的金额', x.line8],
+            ['9', '外州征税的 AGI', x.line9],
+            ['10', `第 8 行 ÷ 第 9 行 = ${x.line10.toFixed(4)}`, null],
+            ['11', '外州对这部分收入征的税', x.line11],
+            ['12', '抵免额 = 第 6 行和第 11 行取小', x.credit, 'total'],
+          ].map(([l, lab, a, cls]) => `<tr class="${cls || ''}"><td class="line">${l}</td><td>${lab}</td><td class="amt">${a === null ? '' : fmt(a)}</td></tr>`).join(''))
+          : `<p class="small">${esc(x.reason)}。</p>`}
+        </div>`).join('');
+      if (c.ostcSum > c.sLine2 + 0.5) sBlock += `<p class="small">各州合计 ${fmt(c.ostcSum)} 超过可抵的加州税 ${fmt(c.sLine2)}，只能抵 ${fmt(c.ostc)}。</p>`;
+    } else {
+      sBlock = '<p class="small muted">没有填写。如果有收入同时被外州征税，在第 4 步“其他州税收抵免”里添加。</p>';
+    }
+
+    function estTable(e, title) {
+      if (!e) return `<p class="muted small">${title}：预计补税不多，2026 年不需要季度预缴。</p>`;
+      return `${table(`${title} · 全年需预缴 ${fmt(e.annual)}`, e.rows.map(([dt, p, amt]) =>
+        `<tr><td class="line num">${dt}</td><td>${pct(p)}</td><td class="amt">${fmt(amt)}</td></tr>`).join(''))}
+        ${e.label ? `<p class="small muted">安全港标准：${esc(e.label)}，已扣除按今年水平估计的预扣税。</p>` : ''}`;
+    }
+
+    pane('caplus').innerHTML = `
+      <div><h2>加州税率表（Schedule ${r.status === 'hoh' ? 'Z' : (r.status === 'mfj' || r.status === 'qss') ? 'Y' : 'X'}）</h2>
+        <p class="muted small">${c.nr ? `540NR：这张表用于你的总应税所得 ${fmt(c.nr.totalTaxable)}，得出平均税率 ${(c.nr.rate * 100).toFixed(2)}%，再乘以加州应税所得 ${fmt(c.taxable)}。` : `你的加州应税所得 ${fmt(c.taxable)}，边际税率 ${pct(c.marginal)}。`}资本利得和股息也按这张表计税。</p></div>
+      <div class="table-wrap"><table><thead><tr><th class="amt">税率</th><th class="amt">区间</th><th class="amt">落在这一档</th><th class="amt">这一档的税</th><th></th></tr></thead><tbody>${brRows}</tbody></table></div>
+      <div class="cols">
+        <div>
+          <h3>加州抵免</h3>
+          <div class="table-wrap"><table><thead><tr><th>抵免</th><th class="amt">你的情况</th><th>条件</th></tr></thead><tbody>
+            ${credits.map((x) => `<tr><td>${x[0]}</td><td class="amt">${x[1]}</td><td class="small muted">${x[2]}</td></tr>`).join('')}
+          </tbody></table></div>
+        </div>
+        <div>
+          <h3>CA SDI 州残障保险</h3>
+          <p class="small">${sdiNote}2024 年起 SDI 取消了工资上限，所以打多份工也不会多扣。以前多扣的部分可以在 540 第 74 行申请退回，现在这一行基本用不到。SDI 可以算进联邦分项扣除里的 SALT。</p>
+          <h3>重要日期</h3>
+          <p class="small">2026 年 4 月 15 日：联邦和加州报税截止、缴税截止。加州自动延期 6 个月到 10 月 15 日，不用填表，但税款仍要在 4 月 15 日前付清。受灾地区（例如洛杉矶山火）可能有特别延期。</p>
+        </div>
+      </div>
+      <div>
+        <h2>加州替代性最低税（Schedule P${c.nr ? ' (540NR)' : ''}）</h2>
+        <p class="muted small">加州 AMT 税率 7%，豁免额 ${fmt(T.CA.amt.exemption[r.status])}。最常见的触发原因是行使 ISO 期权；房产税高、分项扣除多的高收入家庭也可能触发。</p>
+      </div>
+      ${amtBlock}
+      <div>
+        <h2>其他州税收抵免（Schedule S）</h2>
+        <p class="muted small">${r.ca.residency === 'non' ? '非居民只能抵居住州（AZ、GU、OR、VA）的税。' : '加州居民可以抵 44 个州或地区的税，前提是收入按加州规则算来源于该州。AZ、OR、GU 的税由对方给抵免。'}每个州单独算，取两个比例算出来的较小值。</p>
+      </div>
+      <div class="cols">${sBlock}</div>
+      <div class="cols">
+        <div><h3>CalEITC 查表计算</h3>${eitcBlock}</div>
+        <div><h3>YCTC 6 岁以下子女抵免</h3>
+          <p class="small">${c.yctc ? `可领 ${fmt(c.yctc)}。` : '不符合。'}条件：有 CalEITC，并且至少一个孩子在 2025 年底未满 6 岁。最高 $1,189，劳动所得超过 $27,425 后递减，到 $32,901 为 0。</p></div>
+      </div>
+      <div class="cols">
+        <div><h3>2026 年加州预缴税（540-ES）</h3>${estTable(r.est.ca, '加州')}
+          <p class="small muted">加州预缴不是每季 25%，比例是 30% / 40% / 0% / 30%，9 月那期是 0。</p></div>
+        <div><h3>2026 年联邦预缴税（1040-ES）</h3>${estTable(r.est.fed, '联邦')}</div>
+      </div>`;
+  }
+
+  function renderFed(r, d) {
+    const f = r.fed;
+    const body = rows([
+      ['1a', '工资', f.wages],
+      f.taxExemptInt ? ['2a', '免税利息（只申报，不计税）', f.taxExemptInt, 'sub'] : null,
+      ['2b', '应税利息', f.taxableInt],
+      ['3b', '普通股息（其中合格 ' + fmt(f.qualDiv) + '）', f.ordDiv],
+      f.retirement ? ['4b/5b', '退休金和 IRA', f.retirement] : null,
+      f.ssBenefits ? ['6b', `社安金应税部分（总额 ${fmt(f.ssBenefits)}）`, f.ssTaxable] : null,
+      ['7', '资本利得或亏损', f.capIncome],
+      ['8', 'Schedule 1 其他收入（自雇、出租、失业金等）', f.seProfit + f.rental + f.unemployment + f.otherInc],
+      ['9', '总收入', f.totalIncome, 'total'],
+      ['10', '税前调整（半个自雇税、IRA、HSA、学生贷款等）', -f.adjustments],
+      ['11', '调整后总收入 AGI', f.agi, 'total'],
+      ['12', f.itemizes ? '分项扣除（Schedule A）' : '标准扣除', -f.deduction],
+      f.newDeds ? ['13b', '2025 新增扣除（小费、加班费、老人、车贷）', -f.newDeds] : null,
+      f.qbiDed ? ['13a', 'QBI 扣除', -f.qbiDed] : null,
+      ['15', '应税所得', f.taxable, 'total'],
+      ['16', `所得税（普通部分 ${fmt(f.ordinary)}，优惠税率部分 ${fmt(f.pref)}）`, f.incomeTax],
+      f.nonref ? ['19–21', '子女抵免及其他不可退抵免', -f.nonref, 'sub'] : null,
+      f.seTax ? ['23', '自雇税（Schedule SE）', f.seTax] : null,
+      f.addlMed ? ['23', '额外 Medicare 税 0.9%（Form 8959）', f.addlMed] : null,
+      f.niit ? ['23', '投资净收入税 3.8%（Form 8960）', f.niit] : null,
+      ['24', '应缴税合计', f.totalTax, 'total'],
+      ['25', '联邦预扣税', f.withheld + f.addlMedWithheld],
+      f.est ? ['26', '预缴税', f.est] : null,
+      f.eitc ? ['27', '劳动所得抵免 EITC', f.eitc] : null,
+      f.actc ? ['28', '可退还子女抵免 ACTC', f.actc] : null,
+      ['33', '已付与可退抵免合计', f.payments, 'total'],
+      ['34 / 37', f.refund >= 0 ? '退税' : '补税', Math.abs(f.refund), 'total'],
+    ]);
+    const maxTax = Math.max(1, ...f.brackets.map((b) => b.tax));
+    const br = f.brackets.filter((b) => b.amount).map((b) => `<tr><td class="amt">${pct(b.rate)}</td><td class="amt">${fmt(b.amount)}</td><td class="amt">${fmt(b.tax)}</td>
+      <td style="width:35%"><div class="bar fed" style="width:${(b.tax / maxTax * 100).toFixed(1)}%"></div></td></tr>`).join('');
+    pane('fed').innerHTML = `
+      <div><h2>联邦 Form 1040</h2><p class="muted small">行号对应 2025 年 1040。</p></div>
+      ${table('项目', body)}
+      <div class="cols">
+        <div><h3>普通收入税率分布</h3>
+          <div class="table-wrap"><table><thead><tr><th class="amt">税率</th><th class="amt">落在这一档</th><th class="amt">税额</th><th></th></tr></thead><tbody>${br || '<tr><td colspan="4" class="muted">没有普通应税收入</td></tr>'}</tbody></table></div></div>
+        <div><h3>长期资本利得与合格股息</h3>
+          ${table('优惠税率', rows([
+            ['', '0% 档', f.amt0], ['', '15% 档', f.amt15], ['', '20% 档', f.amt20],
+          ]))}
+          <p class="small muted">联邦分项扣除合计 ${fmt(f.itemized)}，标准扣除 ${fmt(f.std)}。SALT 原始金额 ${fmt(f.saltRaw)}，2025 年上限 ${fmt(f.saltCap)}。</p></div>
+      </div>`;
+  }
+
+  // ---------- 交互 ----------
+  let step = 0;
+  function goStep(k) {
+    step = Math.max(0, Math.min(3, k));
+    document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = Number(p.dataset.pane) !== step; });
+    document.querySelectorAll('#step-tabs button').forEach((b) => b.setAttribute('aria-selected', String(Number(b.dataset.step) === step)));
+    $('prev').disabled = step === 0;
+    $('next').textContent = step === 3 ? '查看完整报表' : '下一步';
+  }
+  document.querySelectorAll('#step-tabs button').forEach((b) => b.addEventListener('click', () => goStep(Number(b.dataset.step))));
+  $('prev').addEventListener('click', () => goStep(step - 1));
+  $('next').addEventListener('click', () => {
+    if (step === 3) document.querySelector('.report').scrollIntoView({ behavior: 'smooth' });
+    else goStep(step + 1);
+  });
+  document.querySelectorAll('#report-tabs button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#report-tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+    document.querySelectorAll('[data-tabpane]').forEach((p) => { p.hidden = p.dataset.tabpane !== b.dataset.tab; });
+  }));
+
+  const form = $('form');
+  form.addEventListener('submit', (e) => e.preventDefault());
+  form.addEventListener('input', () => { isSample = false; render(); });
+  form.addEventListener('change', () => { isSample = false; render(); });
+  form.addEventListener('focusout', (e) => {
+    if (e.target.inputMode === 'decimal' && e.target.value) {
+      const v = parseNum(e.target.value);
+      e.target.value = v ? v.toLocaleString('en-US') : '';
+    }
+  });
+
+  $('btn-sample').addEventListener('click', () => { isSample = true; fill(SAMPLE); render(); });
+  $('btn-clear').addEventListener('click', () => { isSample = false; fill({}); goStep(0); render(); $('status').focus(); });
+  $('btn-copy').addEventListener('click', () => {
+    if (!lastResult) return;
+    const { r } = lastResult, f = r.fed, c = r.ca;
+    const text = [
+      `2025 报税估算（${STATUS_LABEL[r.status]}）`,
+      `联邦：AGI ${fmt(f.agi)}，应税 ${fmt(f.taxable)}，税额 ${fmt(f.totalTax)}，${f.refund >= 0 ? '退' : '补'} ${fmt(Math.abs(f.refund))}`,
+      `加州：AGI ${fmt(c.agi)}，应税 ${fmt(c.taxable)}，税额 ${fmt(c.totalTax)}，${c.refund >= 0 ? '退' : '补'} ${fmt(Math.abs(c.refund))}`,
+    ].join('\n');
+    const btn = $('btn-copy');
+    const done = (msg) => { btn.textContent = msg; setTimeout(() => { btn.textContent = '复制结果摘要'; }, 1600); };
+    try {
+      navigator.clipboard.writeText(text).then(() => done('已复制'), () => done('复制失败'));
+    } catch (e) { done('复制失败'); }
+  });
+
+  const saved = load();
+  if (saved) { isSample = !!saved.isSample; fill(saved.d); } else fill(SAMPLE);
+  goStep(0);
+  render();
+})();
+</script>
+
+</body>
+</html>

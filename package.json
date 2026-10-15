@@ -1,0 +1,84 @@
+{
+  "name": "ca-tax-helper",
+  "productName": "加州报税助手",
+  "version": "1.3.0",
+  "description": "California 加州报税助手：2025 税年联邦 1040 + 加州 540 报税估算",
+  "author": "Billion Wu",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "prepare-app": "node scripts/prepare-app.js",
+    "build:web": "node scripts/prepare-app.js docs",
+    "start": "npm run prepare-app && electron .",
+    "dist:win": "npm run prepare-app && electron-builder --win",
+    "dist:mac": "npm run prepare-app && electron-builder --mac",
+    "dist:linux": "npm run prepare-app && electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.billion.catax",
+    "productName": "加州报税助手",
+    "executableName": "CATaxHelper",
+    "artifactName": "CATaxHelper-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**",
+      "app/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "加州报税助手",
+      "artifactName": "CATaxHelper-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "CATaxHelper-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.finance",
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^37.10.3",
+    "electron-builder": "^26.15.3"
+  },
+  "allowScripts": {
+    "electron@37.10.3": true
+  }
+}
