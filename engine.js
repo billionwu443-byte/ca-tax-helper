@@ -17,6 +17,13 @@
     },
     ltcg0:  { single: 48350, mfj: 96700, qss: 96700, mfs: 48350, hoh: 64750 },
     ltcg15: { single: 533400, mfj: 600050, qss: 600050, mfs: 300000, hoh: 566700 },
+    // Form 6251 (2025)：豁免额、递减起点（25%）、26% / 28% 分界点
+    amt: {
+      exemption: { single: 88100, hoh: 88100, mfj: 137000, qss: 137000, mfs: 68500 },
+      phase: { single: 626350, hoh: 626350, mfj: 1252700, qss: 1252700, mfs: 626350 },
+      bracket: { single: 239100, hoh: 239100, mfj: 239100, qss: 239100, mfs: 119550 },
+      mfsAddThr: 900350, mfsAddMax: 68500,
+    },
     std:    { single: 15750, mfj: 31500, qss: 31500, mfs: 15750, hoh: 23625 },
     stdAddl: { single: 2000, hoh: 2000, mfj: 1600, qss: 1600, mfs: 1600 },
     niitThr: { single: 200000, hoh: 200000, mfj: 250000, qss: 250000, mfs: 125000 },
@@ -237,7 +244,9 @@
     const saltCap = Math.max(capFloor, capBase - 0.3 * pos(agi - capPhase));
     const fedSalt = Math.min(saltRaw, saltCap);
     const fedMortLimit = (i.mortgagePre2018 ? 1000000 : 750000) / (mfs ? 2 : 1);
-    const fedMortgage = i.mortgageBal > fedMortLimit ? i.mortgageInt * fedMortLimit / i.mortgageBal : i.mortgageInt;
+    // 2018 年起联邦只允许购房、建房、装修用途的房贷利息（HELOC 买车等不能扣）
+    const fedAcqInt = pos(i.mortgageInt - i.helocInt);
+    const fedMortgage = i.mortgageBal > fedMortLimit ? fedAcqInt * fedMortLimit / i.mortgageBal : fedAcqInt;
     const fedCharity = Math.min(i.charity, 0.6 * agi);
     const fedItemized = fedMedical + fedSalt + fedMortgage + fedCharity;
     const fedItemizes = fedItemized > fedStd;
@@ -282,8 +291,44 @@
     const ctcReduce = 50 * Math.ceil(pos(agi - FED.ctcPhase[grp]) / 1000);
     const ctcAllowed = pos(ctcTotal - ctcReduce);
     const fedNonrefAvail = ctcAllowed + i.fedOtherCredits;
-    const fedNonref = Math.min(fedNonrefAvail, fedIncomeTax);
-    const ctcUsed = Math.min(ctcAllowed, fedIncomeTax);
+    // ---------- 联邦 AMT（Form 6251） ----------
+    const amtTax = (x) => {                           // 第 7 / 18 行：26% / 28%
+      const b = FED.amt.bracket[s];
+      return x <= b ? 0.26 * x : 0.28 * x - 0.02 * b;
+    };
+    const f6251 = {
+      l1b: agi - (fedDeduction + qbiDed + newDeds - seniorDed),     // 应税所得 + 老年人扣除加回
+      l2a: fedItemizes ? fedSalt : fedStd,                           // 州税（或标准扣除）加回
+      l2g: i.pabInt,                                                 // 私人活动债券利息
+      l2i: i.isoSpread,                                              // ISO 行权价差
+      l3: i.fedAmtOther,
+    };
+    f6251.l4 = f6251.l1b + f6251.l2a + f6251.l2g + f6251.l2i + f6251.l3;
+    if (mfs && f6251.l4 > FED.amt.mfsAddThr) f6251.l4 += Math.min(0.25 * (f6251.l4 - FED.amt.mfsAddThr), FED.amt.mfsAddMax);
+    f6251.l5 = pos(FED.amt.exemption[s] - 0.25 * pos(f6251.l4 - FED.amt.phase[s]));
+    f6251.l6 = pos(f6251.l4 - f6251.l5);
+    // 第 III 部分：合格股息和长期资本利得仍按 0 / 15 / 20%
+    const prefAll = qd + prefLTCG;
+    if (f6251.l6 > 0 && prefAll > 0) {
+      const l12 = f6251.l6, l13 = prefAll, l16 = Math.min(l12, l13), l17 = l12 - l16, l18 = amtTax(l17);
+      const l20 = pos(fedTaxable - prefAll);
+      const l21 = pos(FED.ltcg0[s] - l20), l22 = Math.min(l12, l13), l23 = Math.min(l21, l22), l24 = l22 - l23;
+      const l29 = pos(FED.ltcg15[s] - (l21 + l20)), l30 = Math.min(l24, l29), l31 = 0.15 * l30;
+      const l33 = l22 - (l23 + l30), l34 = 0.20 * l33;
+      const l40 = l18 + l31 + l34;
+      f6251.partIII = { l16, l17, l18, l23, l30, l31, l33, l34, l40 };
+      f6251.l7 = Math.min(l40, amtTax(l12));
+    } else {
+      f6251.l7 = amtTax(f6251.l6);
+    }
+    f6251.l9 = f6251.l7;                                             // 不计算外国税收抵免
+    f6251.l10 = fedIncomeTax;
+    const fedAmt = pos(f6251.l9 - f6251.l10);
+    f6251.l11 = fedAmt;
+
+    // 子女抵免等不可退抵免可以抵 AMT（1040 第 18 行 = 第 16 + 17 行）
+    const fedNonref = Math.min(fedNonrefAvail, fedIncomeTax + fedAmt);
+    const ctcUsed = Math.min(ctcAllowed, fedIncomeTax + fedAmt);
     const earned = W + i.seProfit - halfSE;
     const actc = Math.min(pos(ctcAllowed - ctcUsed), kids * FED.ctcRefundable, 0.15 * pos(earned - 2500));
 
@@ -304,7 +349,7 @@
     const addlMedWithheld = 0.009 * pos(W - 200000);
     const nii = pos(i.taxableInt + i.ordDiv + capIncome + i.rental);
     const niit = 0.038 * Math.min(nii, pos(agi - FED.niitThr[s]));
-    const fedTotalTax = pos(fedIncomeTax - fedNonref) + seTax + addlMed + niit;
+    const fedTotalTax = pos(fedIncomeTax + fedAmt - fedNonref) + seTax + addlMed + niit;
     const fedPayments = i.fedWithheld + i.fedEst + addlMedWithheld + actc + eitc;
     const fedRefund = fedPayments - fedTotalTax;
 
@@ -531,6 +576,8 @@
       warn.push('540NR 的税额 = 加州来源应税所得 × 按全年总收入计算的平均税率，所以来自外州的收入会推高你在加州的税率。');
     }
     if (i.rental < 0) warn.push('出租房净亏损受被动亏损规则限制（MAGI 10 万以上开始减少 $25,000 特别额度），本工具按全额抵扣，可能偏低。');
+    if (fedAmt > 0) warn.push(`你需要缴纳联邦 AMT ${fmt(fedAmt)}（Form 6251 第 11 行，填在 Schedule 2 第 1 行）。ISO 等“时间差”项目产生的 AMT 以后年度可用 Form 8801 抵免拿回。`);
+    if (i.helocInt && i.mortgageInt) warn.push(`联邦 2018 年起不能扣非购房用途的房贷利息，${fmt(Math.min(i.helocInt, i.mortgageInt))} 已从联邦扣除中去掉；加州仍允许扣（AMT 时加回）。`);
     if (amt > 0) warn.push(`你需要缴纳加州 AMT ${fmt(amt)}（Schedule P 第 26 行，填在 ${nr ? '540NR 第 71 行' : '540 第 61 行'}）。行使 ISO 产生的 AMT 以后年度可能通过 FTB 3510 抵免拿回。`);
     if (i.caOtherCredits > otherAllowed + 0.5) warn.push(`其他加州抵免 ${fmt(i.caOtherCredits)} 中只有 ${fmt(otherAllowed)} 能用：育儿费用等抵免不能把税抵到暂定最低税（TMT）以下。`);
     if (bizIncome > 0) warn.push('AMT 计算假设你的生意总收入低于 $100 万，按合格纳税人把自雇收入排除在 AMTI 之外（Schedule P 第 17 行）。');
@@ -558,7 +605,7 @@
         medical: fedMedical, saltRaw, saltCap, salt: fedSalt, mortgage: fedMortgage, charity: fedCharity,
         seniorDed, tipsDed, otDed, carDed, newDeds, qbiDed, taxable: fedTaxable,
         ordinary, pref, amt0, amt15, amt20, incomeTax: fedIncomeTax, brackets: ordTax.rows,
-        ctcAllowed, ctcUsed, nonref: fedNonref, actc, eitc,
+        ctcAllowed, ctcUsed, nonref: fedNonref, actc, eitc, amt: fedAmt, f6251,
         seTax, addlMed, niit, totalTax: fedTotalTax,
         withheld: i.fedWithheld, est: i.fedEst, addlMedWithheld, payments: fedPayments, refund: fedRefund,
         marginal: marginalRate(ordinary, FED.brackets[s], RATES_FED),

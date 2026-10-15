@@ -329,12 +329,14 @@ footer a { color: var(--pacific); }
           </div>
         </fieldset>
         <fieldset>
-          <legend>加州 AMT<span class="src ca" style="margin-left:8px">Schedule P</span></legend>
-          <p class="legend-note">替代性最低税会自动计算。标准扣除、房产税、杂项扣除等调整项会自动加回，下面只需要填系统算不出来的项目。</p>
+          <legend>替代性最低税 AMT<span class="src" style="margin-left:8px">Form 6251</span><span class="src ca">Schedule P</span></legend>
+          <p class="legend-note">联邦和加州的 AMT 都会自动计算。标准扣除、州税、房产税、老年人扣除等会自动加回，下面只需要填系统算不出来的项目。</p>
           <div class="grid">
-            <div class="field"><label for="isoSpread">ISO 行权价差<span class="src ca">第 10 行</span></label><div class="money"><input type="text" inputmode="decimal" id="isoSpread"></div><span class="hint">行权日市价 − 行权价，再乘以股数；只算当年行权且年底前没卖的部分</span></div>
-            <div class="field"><label for="helocInt">非购房用途的房贷利息<span class="src ca">第 4 行</span></label><div class="money"><input type="text" inputmode="decimal" id="helocInt"></div><span class="hint">比如用 HELOC 买车、还信用卡的那部分利息</span></div>
-            <div class="field"><label for="amtOther">其他 AMT 调整项<span class="src ca">第 7–13 行</span></label><div class="money"><input type="text" inputmode="decimal" id="amtOther"></div><span class="hint">折旧差异、被动活动、K-1 上的 AMT 项目等，可以填负数</span></div>
+            <div class="field"><label for="isoSpread">ISO 行权价差<span class="src">6251 第 2i 行</span><span class="src ca">P 第 10 行</span></label><div class="money"><input type="text" inputmode="decimal" id="isoSpread"></div><span class="hint">行权日市价 − 行权价，再乘以股数；只算当年行权且年底前没卖的部分。联邦和加州共用（Form 3921）</span></div>
+            <div class="field"><label for="helocInt">非购房用途的房贷利息<span class="src ca">第 4 行</span></label><div class="money"><input type="text" inputmode="decimal" id="helocInt"></div><span class="hint">比如用 HELOC 买车、还信用卡的那部分利息。联邦正常税本来就不能扣，加州可以扣但 AMT 要加回</span></div>
+            <div class="field"><label for="pabInt">私人活动债券利息<span class="src">1099-INT box 9</span></label><div class="money"><input type="text" inputmode="decimal" id="pabInt"></div><span class="hint">免税市政债利息中的一部分，联邦 AMT 要计入</span></div>
+            <div class="field"><label for="fedAmtOther">其他联邦 AMT 调整项<span class="src">6251 第 2–3 行</span></label><div class="money"><input type="text" inputmode="decimal" id="fedAmtOther"></div><span class="hint">折旧差异、被动活动、K-1 上的 AMT 项目等，可以填负数</span></div>
+            <div class="field"><label for="amtOther">其他加州 AMT 调整项<span class="src ca">P 第 7–13 行</span></label><div class="money"><input type="text" inputmode="decimal" id="amtOther"></div><span class="hint">折旧差异、被动活动、K-1 上的 AMT 项目等，可以填负数</span></div>
             <div class="field nr-only"><label for="nrIso">其中计入加州的 ISO 价差<span class="src ca">540NR 第 29d 行</span></label><div class="money"><input type="text" inputmode="decimal" id="nrIso"></div><span class="hint">留空按居住月数估算；非居民按授予到行权期间在加州工作的天数比例算</span></div>
           </div>
         </fieldset>
@@ -411,7 +413,7 @@ footer a { color: var(--pacific); }
     参数依据：IRS 2025 年通胀调整（Rev. Proc. 2024-40）和 2025 年 7 月 OBBBA 法案的修改；加州税率表、标准扣除、免税额抵免、租房抵免门槛来自
     <a href="https://www.ftb.ca.gov/about-ftb/newsroom/tax-news/2025/10.html" target="_blank" rel="noopener">FTB Tax News 2025 年 10 月</a>，CalEITC 查表和 YCTC 来自
     <a href="https://www.ftb.ca.gov/forms/2025/2025-3514-booklet.html" target="_blank" rel="noopener">FTB 3514 说明</a>中的 2025 Earned Income Tax Credit Table（658 档全表）。
-    加州高收入扣除与抵免递减门槛是按 3.0% 通胀推算的估计值。本工具用于估算和核对，不能替代正式报税软件或 CPA，加州 AMT 按 FTB 2025 Schedule P 计算。540NR 的收入来源划分和 Schedule S 的外州税额需要你自己按外州报税表填写。不计算联邦 AMT（Form 6251）、外国税收抵免和 AMT 抵免结转（FTB 3510）。
+    加州高收入扣除与抵免递减门槛是按 3.0% 通胀推算的估计值。本工具用于估算和核对，不能替代正式报税软件或 CPA，加州 AMT 按 FTB 2025 Schedule P 计算。540NR 的收入来源划分和 Schedule S 的外州税额需要你自己按外州报税表填写。联邦 AMT 按 IRS 2025 Form 6251 说明计算。不计算外国税收抵免和 AMT 抵免结转（Form 8801 / FTB 3510）。
   </footer>
 </div>
 
@@ -429,7 +431,7 @@ footer a { color: var(--pacific); }
     'caMuniInt', 'otherMuniInt', 'ordDiv', 'qualDiv', 'stGain', 'ltGain', 'seProfit', 'rental', 'unemployment', 'ssBenefits',
     'retirement', 'otherInc', 'ira', 'hsa', 'studentLoan', 'seHealth', 'medical', 'propertyTax', 'vlf', 'mortgageInt',
     'mortgageBal', 'charity', 'caMisc', 'carLoanInt', 'fedWithheld', 'fedEst', 'fedOtherCredits', 'caWithheld', 'sdiWithheld',
-    'caEst', 'priorCAPaid', 'caOtherCredits', 'isoSpread', 'helocInt', 'amtOther'];
+    'caEst', 'priorCAPaid', 'caOtherCredits', 'isoSpread', 'helocInt', 'amtOther', 'pabInt', 'fedAmtOther'];
   const NR_FIELDS = ['nrWages', 'nrInvest', 'nrSE', 'nrRental', 'nrRetire', 'nrOther', 'nrIso'];
   const BOOL_FIELDS = ['self65', 'selfBlind', 'spouse65', 'spouseBlind', 'caRenter', 'mortgagePre2018'];
 
@@ -946,6 +948,7 @@ footer a { color: var(--pacific); }
       f.qbiDed ? ['13a', 'QBI 扣除', -f.qbiDed] : null,
       ['15', '应税所得', f.taxable, 'total'],
       ['16', `所得税（普通部分 ${fmt(f.ordinary)}，优惠税率部分 ${fmt(f.pref)}）`, f.incomeTax],
+      f.amt ? ['17', '联邦 AMT（Form 6251 第 11 行，经 Schedule 2）', f.amt] : null,
       f.nonref ? ['19–21', '子女抵免及其他不可退抵免', -f.nonref, 'sub'] : null,
       f.seTax ? ['23', '自雇税（Schedule SE）', f.seTax] : null,
       f.addlMed ? ['23', '额外 Medicare 税 0.9%（Form 8959）', f.addlMed] : null,
@@ -961,6 +964,37 @@ footer a { color: var(--pacific); }
     const maxTax = Math.max(1, ...f.brackets.map((b) => b.tax));
     const br = f.brackets.filter((b) => b.amount).map((b) => `<tr><td class="amt">${pct(b.rate)}</td><td class="amt">${fmt(b.amount)}</td><td class="amt">${fmt(b.tax)}</td>
       <td style="width:35%"><div class="bar fed" style="width:${(b.tax / maxTax * 100).toFixed(1)}%"></div></td></tr>`).join('');
+    const a = f.f6251, A = T.FED.amt;
+    const amtLines = [
+      ['1b', '应税所得（加回老年人扣除）', a.l1b],
+      ['2a', f.itemizes ? '州和地方税（SALT）加回' : '标准扣除加回', a.l2a],
+      a.l2g ? ['2g', '私人活动债券利息', a.l2g] : null,
+      a.l2i ? ['2i', 'ISO 行权价差', a.l2i] : null,
+      a.l3 ? ['2–3', '其他调整项', a.l3] : null,
+      ['4', '替代性最低应税所得 AMTI', a.l4, 'total'],
+      ['5', `豁免额（AMTI 超过 ${fmt(A.phase[r.status])} 后每多 $1 减 $0.25）`, -a.l5],
+      ['6', '第 4 行 − 第 5 行', a.l6],
+    ];
+    if (a.partIII) {
+      const p3 = a.partIII;
+      amtLines.push(
+        ['17–18', `普通部分 ${fmt(p3.l17)} 按 26% / 28%`, p3.l18],
+        p3.l31 ? ['30–31', `资本利得和合格股息 ${fmt(p3.l30)} 按 15%`, p3.l31] : null,
+        p3.l34 ? ['33–34', `资本利得和合格股息 ${fmt(p3.l33)} 按 20%`, p3.l34] : null,
+        p3.l23 ? ['23', `资本利得和合格股息 ${fmt(p3.l23)} 按 0%`, 0] : null,
+      );
+    }
+    amtLines.push(
+      ['7 / 9', '暂定最低税 TMT', a.l9, 'total'],
+      ['10', '正常所得税（1040 第 16 行）', -a.l10],
+      ['11', '联邦 AMT', a.l11, 'total'],
+    );
+    const fedAmtBlock = `
+      <div><h3>联邦替代性最低税（Form 6251）</h3>
+        <p class="muted small">2025 年豁免额 ${fmt(A.exemption[r.status])}；超过豁免额的部分前 ${fmt(A.bracket[r.status])} 按 26%，再往上 28%；长期资本利得和合格股息仍按 0 / 15 / 20%。和加州不同，联邦 AMT 不加回房贷利息、医疗费和 QBI，2025 新增的小费、加班费、车贷扣除也不加回。</p></div>
+      ${table('Form 6251', rows(amtLines))}
+      <p class="small muted">${f.amt ? `需要缴纳 ${fmt(f.amt)} 的联邦 AMT。子女税收抵免等可以抵减 AMT。` : `暂定最低税 ${fmt(a.l9)} 低于正常所得税 ${fmt(a.l10)}，不用缴联邦 AMT。`}</p>`;
+
     pane('fed').innerHTML = `
       <div><h2>联邦 Form 1040</h2><p class="muted small">行号对应 2025 年 1040。</p></div>
       ${table('项目', body)}
@@ -972,7 +1006,8 @@ footer a { color: var(--pacific); }
             ['', '0% 档', f.amt0], ['', '15% 档', f.amt15], ['', '20% 档', f.amt20],
           ]))}
           <p class="small muted">联邦分项扣除合计 ${fmt(f.itemized)}，标准扣除 ${fmt(f.std)}。SALT 原始金额 ${fmt(f.saltRaw)}，2025 年上限 ${fmt(f.saltCap)}。</p></div>
-      </div>`;
+      </div>
+      ${fedAmtBlock}`;
   }
 
   // ---------- 交互 ----------

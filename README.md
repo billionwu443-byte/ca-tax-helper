@@ -12,7 +12,7 @@
 - 加州 540NR：部分年份居民和非居民按比例计税
 - CalEITC（FTB 3514 官方 2025 查表）与 Young Child Tax Credit
 - Schedule S 其他州税收抵免
-- Schedule P 加州 AMT（含 ISO）
+- Form 6251 联邦 AMT 与 Schedule P 加州 AMT（含 ISO）
 - 2026 年联邦与加州预缴税计划
 
 所有计算都在浏览器本地完成，不上传任何数据。
